@@ -49,7 +49,7 @@ app.get('/api/dashboard', async (req, res) => {
   }
 });
 
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 initDatabase()
   .then(() => {
