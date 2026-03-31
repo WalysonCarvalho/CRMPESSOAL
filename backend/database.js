@@ -8,12 +8,11 @@ if (!connectionString) {
 
 const pool = new Pool({
   connectionString,
-  ssl: {
-    rejectUnauthorized: false,
-  },
+  ssl: { rejectUnauthorized: false },
 });
 
 async function initDatabase() {
+  // ── Tabelas originais ──────────────────────────────────────────────────────
   await pool.query(`
     CREATE TABLE IF NOT EXISTS leads (
       id SERIAL PRIMARY KEY,
@@ -87,9 +86,18 @@ async function initDatabase() {
       ('meta_vendas', '50000')
     ON CONFLICT (chave) DO NOTHING;
   `);
+
+  // ── Migração: adiciona coluna mes_referencia (seguro — não quebra se já existir) ──
+  await pool.query(`ALTER TABLE leads      ADD COLUMN IF NOT EXISTS mes_referencia TEXT DEFAULT ''`);
+  await pool.query(`ALTER TABLE captacoes  ADD COLUMN IF NOT EXISTS mes_referencia TEXT DEFAULT ''`);
+  await pool.query(`ALTER TABLE vendas     ADD COLUMN IF NOT EXISTS mes_referencia TEXT DEFAULT ''`);
+  await pool.query(`ALTER TABLE agenda     ADD COLUMN IF NOT EXISTS mes_referencia TEXT DEFAULT ''`);
+
+  // ── Preenche registros antigos com o mês em que foram criados ──────────────
+  await pool.query(`UPDATE leads     SET mes_referencia = TO_CHAR(criado_em, 'YYYY-MM') WHERE mes_referencia = ''`);
+  await pool.query(`UPDATE captacoes SET mes_referencia = TO_CHAR(criado_em, 'YYYY-MM') WHERE mes_referencia = ''`);
+  await pool.query(`UPDATE vendas    SET mes_referencia = TO_CHAR(criado_em, 'YYYY-MM') WHERE mes_referencia = ''`);
+  await pool.query(`UPDATE agenda    SET mes_referencia = TO_CHAR(criado_em, 'YYYY-MM') WHERE mes_referencia = ''`);
 }
 
-module.exports = {
-  pool,
-  initDatabase,
-};
+module.exports = { pool, initDatabase };
